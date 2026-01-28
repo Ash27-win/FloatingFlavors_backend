@@ -83,7 +83,7 @@ try {
     }
 
     // Fetch user
-    $stmt = $pdo->prepare("SELECT id, name, email, loyalty_points FROM users WHERE id = :id LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id, name, email, role, loyalty_points FROM users WHERE id = :id LIMIT 1");
     $stmt->execute([':id' => $user_id]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
@@ -164,6 +164,7 @@ try {
     "userStats" => [
         "userId" => intval($user['id']),
         "userName" => $user['name'],
+        "role" => $user['role'],
         "totalOrders" => $totalOrders,
         "loyaltyPoints" => $loyaltyPoints
     ],
