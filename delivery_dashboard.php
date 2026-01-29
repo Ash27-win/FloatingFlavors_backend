@@ -1,11 +1,12 @@
 <?php
-require_once "config.php";
-header("Content-Type: application/json");
+require_once "middleware.php"; // Validate Token
 
-$deliveryPartnerId = $_GET['delivery_partner_id'] ?? null;
+$deliveryPartnerId = $GLOBALS['AUTH_USER_ID'] ?? null;
+$role = $GLOBALS['AUTH_ROLE'] ?? '';
 
-if (!$deliveryPartnerId) {
-    echo json_encode(["success"=>false,"message"=>"delivery_partner_id required"]);
+if (!$deliveryPartnerId || $role !== 'Delivery') {
+    http_response_code(403);
+    echo json_encode(["success"=>false,"message"=>"Access denied. Delivery Partner only."]);
     exit;
 }
 

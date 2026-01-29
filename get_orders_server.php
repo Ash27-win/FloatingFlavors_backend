@@ -1,6 +1,12 @@
 <?php
 // get_orders_server.php
-require_once "config.php";
+require_once "middleware.php";
+
+if (($GLOBALS['AUTH_ROLE'] ?? '') !== 'Admin') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Admin access only']);
+    exit;
+}
 
 try {
     // Read query params

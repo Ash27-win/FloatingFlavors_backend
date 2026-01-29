@@ -1,10 +1,11 @@
 <?php
-require_once "config.php";
+require_once "middleware.php";
 
 try {
-    $adminId = isset($_GET['admin_id']) ? (int)$_GET['admin_id'] : 0;
-    if ($adminId <= 0) {
-        echo json_encode(['success'=>false,'message'=>'Missing admin_id']);
+    $adminId = $GLOBALS['AUTH_USER_ID'] ?? 0;
+    if ($adminId <= 0 || ($GLOBALS['AUTH_ROLE'] ?? '') !== 'Admin') {
+        http_response_code(403);
+        echo json_encode(['success'=>false,'message'=>'Admin access only']);
         exit;
     }
 

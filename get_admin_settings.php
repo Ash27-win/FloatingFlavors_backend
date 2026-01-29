@@ -1,14 +1,15 @@
 <?php
 // get_admin_settings.php
-require_once "config.php";
-header('Content-Type: application/json; charset=utf-8');
+require_once "middleware.php"; // Token Auth
 
-try {
-    $admin_id = isset($_GET['admin_id']) ? (int)$_GET['admin_id'] : 0;
-    if ($admin_id <= 0) {
-        echo json_encode(['success'=>false,'message'=>'admin_id required']);
-        exit;
-    }
+$admin_id = $GLOBALS['AUTH_USER_ID'] ?? 0;
+$role = $GLOBALS['AUTH_ROLE'] ?? '';
+
+if ($admin_id <= 0 || $role !== 'Admin') {
+    http_response_code(403);
+    echo json_encode(['success'=>false,'message'=>'Admin access only']);
+    exit;
+}
 
     $sql = "SELECT id AS admin_id, full_name, email, phone, business_name, address, avatar_url
             FROM admins WHERE id = :id LIMIT 1";
@@ -48,7 +49,5 @@ try {
 
     echo json_encode(['success'=>true,'message'=>'Admin settings fetched','data'=>$data]);
 
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success'=>false,'message'=>'Server error','error'=>$e->getMessage()]);
-}
+    // End of script, no catch block needed as we removed the try
+
