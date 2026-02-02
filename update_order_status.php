@@ -121,6 +121,77 @@ try {
         default => 'Order status updated successfully'
     };
 
+    /* ================= 🔔 NOTIFICATION TRIGGER (NEW) ================= */
+    require_once "send_notification_helper.php";
+    
+    $notifTitle = "Order Update";
+    $notifBody = "Your order #$orderId is now $status";
+    $screen = "UserOrderDetails";
+
+    if ($status === 'CONFIRMED') {
+        // 1. Notify User (Standard flow below)
+        $notifTitle = "Order Accepted 👨‍🍳";
+        $notifBody = "The kitchen has accepted your order #$orderId. Cooking started!";
+        $screen = "OrderTrackingScreen"; 
+
+        // 2. Broadcast to Delivery Partners (New Flow)
+        try {
+            // Fetch all unique delivery partner IDs
+            $delStmt = $pdo->prepare("SELECT DISTINCT user_id FROM fcm_tokens WHERE role = 'Delivery'");
+            $delStmt->execute();
+            $delRows = $delStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($delRows as $dRow) {
+                sendNotification(
+                    $dRow['user_id'], 
+                    'Delivery', 
+                    "New Order Available 📦",
+                    "Order #$orderId is ready for pickup. Accept it now!",
+                    "NEW_ORDER",
+                    $orderId, 
+                    ['screen' => 'DeliveryDashboard'] 
+                );
+            }
+        } catch (Exception $e) {
+            error_log("Delivery Broadcast Error: " . $e->getMessage());
+        }
+
+    } elseif ($status === 'OUT_FOR_DELIVERY') {
+        $notifTitle = "Order On The Way 🚚";
+        $notifBody = "Your food is out for delivery! Track it live.";
+        $screen = "OrderTrackingScreen";
+    } elseif ($status === 'DELIVERED') {
+        $notifTitle = "Order Delivered ✅";
+        $notifBody = "Enjoy your meal! Please rate us.";
+    } elseif ($status === 'REJECTED') {
+        $notifTitle = "Order Rejected ⚠️";
+        $reason = $rejectReason ?: "Unfortunately, we cannot fulfill this order.";
+        $notifBody = "Reason: $reason";
+        $screen = "UserOrderDetails";
+        
+    } elseif ($status === 'CANCELLED') {
+        $notifTitle = "Order Cancelled ❌";
+        $notifBody = "Your order #$orderId has been cancelled.";
+    }
+
+    // Fetch user_id for this order to notify them
+    $uStmt = $pdo->prepare("SELECT user_id FROM orders WHERE id = ?");
+    $uStmt->execute([$orderId]);
+    $uRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($uRow) {
+        sendNotification(
+            $uRow['user_id'], 
+            'User', 
+            $notifTitle,
+            $notifBody,
+            "ORDER_" . strtoupper($status),
+            $orderId,
+            ['screen' => $screen]
+        );
+    }
+    /* ================================================================= */
+
     echo json_encode([
         "success" => true,
         "order_id" => (int)$orderId,

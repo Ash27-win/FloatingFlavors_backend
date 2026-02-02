@@ -54,6 +54,13 @@ if (!defined('ACCESS_TOKEN_EXP')) define('ACCESS_TOKEN_EXP', 60 * 60 * 24 * 30);
 if (!defined('GRAPHHOPPER_API_KEY')) {
     define('GRAPHHOPPER_API_KEY', '4ad1c669-4572-4d1b-90cc-9e55fb21dc3f');
 }
+
+/* ✅ DEFINE FCM SERVICE ACCOUNT (HTTP v1) */
+if (!defined('GOOGLE_APPLICATION_CREDENTIALS')) {
+    // Make sure to put your json file in the root directory with this name
+    define('GOOGLE_APPLICATION_CREDENTIALS', __DIR__ . '/fcm-service-account.json');
+}
+// Removed legacy FCM_SERVER_KEY as requested.
 /* ================= 🔥 FIX END ================= */
 
 if (!headers_sent()) {

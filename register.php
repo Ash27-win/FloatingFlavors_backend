@@ -56,6 +56,21 @@ $stmt = $pdo->prepare("
 
 try {
     $stmt->execute([$name, $email, $passwordHash, $role]);
+    $user_id = $pdo->lastInsertId(); // Capture ID
+
+    // === 🔔 WELCOME NOTIFICATION (NEW) ===
+    require_once "send_notification_helper.php";
+    sendNotification(
+        $user_id,
+        $role,
+        "Welcome to Floating Flavors! 👋",
+        "Thanks for joining us, $name! Explore our menu and order your first meal.",
+        "WELCOME_MSG",
+        $user_id, // Reference to self
+        ['screen' => 'Home']
+    );
+    // =====================================
+
     echo json_encode(["success" => true, "message" => "Registration successful"]);
 } catch (PDOException $e) {
     http_response_code(500);

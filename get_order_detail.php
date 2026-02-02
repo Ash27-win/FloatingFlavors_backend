@@ -22,20 +22,20 @@ try {
         o.id,
         o.customer_name,
         o.status,
+        o.reject_reason,
         o.time_ago,
         o.distance,
         o.amount,
         o.created_at,
         o.delivery_partner_id,
-        CONCAT(
-            u.house, ', ',
-            u.area, ', ',
-            u.city, ' - ',
-            u.pincode,
-            IF(u.landmark IS NOT NULL, CONCAT(' (', u.landmark, ')'), '')
+        CONCAT_WS(', ',
+            u.house,
+            u.area,
+            u.city,
+            CONCAT(u.pincode, IF(u.landmark IS NOT NULL, CONCAT(' (', u.landmark, ')'), ''))
         ) AS delivery_address
     FROM orders o
-    JOIN user_addresses u 
+    LEFT JOIN user_addresses u 
         ON u.id = o.user_address_id
     WHERE o.id = :id
     LIMIT 1
@@ -77,6 +77,7 @@ try {
         'customer_name' => $order['customer_name'],
         'items' => $itemList,
         'status' => $order['status'],
+        'reject_reason' => $order['reject_reason'],
         'created_at' => $createdIso,
         'time_ago' => $timeAgo,
         'distance' => $order['distance'],

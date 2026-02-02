@@ -11,35 +11,66 @@ if ($admin_id <= 0 || $role !== 'Admin') {
     exit;
 }
 
-    $sql = "SELECT id AS admin_id, full_name, email, phone, business_name, address, avatar_url
-            FROM admins WHERE id = :id LIMIT 1";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([':id'=>$admin_id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    // 1. Fetch Core User Details (Source of Truth for Auth)
+    // We use the ID from the token ($admin_id) to get the REAL user who logged in.
+    $userStmt = $pdo->prepare("SELECT name, email FROM users WHERE id = :uid");
+    $userStmt->execute([':uid' => $admin_id]);
+    $userRow = $userStmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) {
-        echo json_encode(['success'=>false,'message'=>'Admin not found']);
+    if (!$userRow) {
+        http_response_code(404);
+        echo json_encode(['success'=>false,'message'=>'User account not found']);
         exit;
     }
 
-    // fetch notification prefs (optional)
-    $prefsStmt = $pdo->prepare("SELECT new_order_alerts, low_stock_alerts, ai_insights, customer_feedback FROM admin_notification_prefs WHERE admin_id = :id");
-    $prefsStmt->execute([':id'=>$admin_id]);
-    $prefs = $prefsStmt->fetch(PDO::FETCH_ASSOC);
+    $email = $userRow['email'];
+    $fullName = $userRow['name'];
 
-    // default prefs if missing
-    $prefs = $prefs ?: ['new_order_alerts'=>0,'low_stock_alerts'=>0,'ai_insights'=>0,'customer_feedback'=>0];
+    // 2. Fetch Extended Admin Profile (Business Info) by EMAIL
+    // We match by EMAIL because users.id and admins.id might not be synchronized.
+    $adminStmt = $pdo->prepare("SELECT * FROM admins WHERE email = :email LIMIT 1");
+    $adminStmt->execute([':email' => $email]);
+    $adminRow = $adminStmt->fetch(PDO::FETCH_ASSOC);
+
+    // Default values if no profile exists in 'admins' table yet
+    $businessName = "My Cloud Kitchen";
+    $address = "";
+    $phone = "";
+    $avatarUrl = null;
+    $adminTableId = 0;
+
+    if ($adminRow) {
+        $adminTableId = $adminRow['id'];
+        $businessName = $adminRow['business_name'];
+        $address = $adminRow['address'];
+        $phone = $adminRow['phone'];
+        $avatarUrl = $adminRow['avatar_url'];
+        // Ideally prefer the name in admins table if set, otherwise keep users table name
+        if (!empty($adminRow['full_name'])) {
+            $fullName = $adminRow['full_name'];
+        }
+    }
+
+    // 3. Fetch Notification Prefs (using admins.id if we found one, else user_id fallback?)
+    // Actually prefs are usually linked to the admin_id (which in this context was ambiguous).
+    // Let's assume matches the ID in 'admins' table if it exists, otherwise 0.
+    $prefs = ['new_order_alerts'=>0,'low_stock_alerts'=>0,'ai_insights'=>0,'customer_feedback'=>0];
+    
+    if ($adminTableId > 0) {
+        $prefsStmt = $pdo->prepare("SELECT new_order_alerts, low_stock_alerts, ai_insights, customer_feedback FROM admin_notification_prefs WHERE admin_id = :id");
+        $prefsStmt->execute([':id' => $adminTableId]);
+        $fetched = $prefsStmt->fetch(PDO::FETCH_ASSOC);
+        if ($fetched) $prefs = $fetched;
+    }
 
     $data = [
-        'admin_id' => (int)$row['admin_id'],
-        'full_name' => $row['full_name'],
-        'email' => $row['email'],
-        'phone' => $row['phone'],
-        'business_name' => $row['business_name'],
-        'address' => $row['address'],
-        // IMPORTANT: keep avatar_url exactly as stored (could be relative)
-        'avatar_url' => $row['avatar_url'],
-        // return prefs as booleans (frontend expects booleans)
+        'admin_id' => (int)$admin_id, // Keep consistency with Token ID
+        'full_name' => $fullName,
+        'email' => $email,
+        'phone' => $phone,
+        'business_name' => $businessName,
+        'address' => $address,
+        'avatar_url' => $avatarUrl,
         'new_order_alerts' => (bool)$prefs['new_order_alerts'],
         'low_stock_alerts' => (bool)$prefs['low_stock_alerts'],
         'ai_insights' => (bool)$prefs['ai_insights'],
