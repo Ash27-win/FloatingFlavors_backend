@@ -57,8 +57,15 @@ if (!defined('GRAPHHOPPER_API_KEY')) {
 
 /* ✅ DEFINE FCM SERVICE ACCOUNT (HTTP v1) */
 if (!defined('GOOGLE_APPLICATION_CREDENTIALS')) {
-    // Make sure to put your json file in the root directory with this name
-    define('GOOGLE_APPLICATION_CREDENTIALS', __DIR__ . '/fcm-service-account.json');
+    // SECURITY UPDATE: Load from Environment Variable
+    $envPath = getenv('FIREBASE_SERVICE_ACCOUNT_PATH');
+    
+    if ($envPath && file_exists($envPath)) {
+        define('GOOGLE_APPLICATION_CREDENTIALS', $envPath);
+    } else {
+        // Fallback for local dev (if file exists)
+        define('GOOGLE_APPLICATION_CREDENTIALS', __DIR__ . '/fcm-service-account.json');
+    }
 }
 // Removed legacy FCM_SERVER_KEY as requested.
 /* ================= 🔥 FIX END ================= */
