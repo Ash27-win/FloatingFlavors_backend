@@ -1,7 +1,9 @@
 <?php
-require_once "config.php";
-$stmt = $pdo->query("DESCRIBE orders");
-$cols = $stmt->fetchAll(PDO::FETCH_ASSOC);
-foreach($cols as $c) {
-    echo "{$c['Field']} ({$c['Type']})\n";
+require_once 'config.php';
+try {
+    $stmt = $pdo->query("SHOW COLUMNS FROM menu_items");
+    $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    echo "Columns: " . implode(", ", $columns) . "\n";
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
 }

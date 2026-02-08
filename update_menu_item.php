@@ -131,6 +131,16 @@ try {
     }
     if ($category !== null) { $fields[] = 'category = ?'; $params[] = $category; }
     if ($is_available !== null) { $fields[] = 'is_available = ?'; $params[] = (int)$is_available; }
+    
+    $stock = isset($_POST['stock']) ? $_POST['stock'] : null;
+    if ($stock !== null) {
+        if (!is_numeric($stock)) {
+             jsonResponse(['success' => false, 'message' => 'Stock must be numeric'], 400);
+        }
+        $fields[] = 'stock = ?'; 
+        $params[] = (int)$stock; 
+    }
+
     if ($newRelativeImage !== null) { $fields[] = 'image_url = ?'; $params[] = $newRelativeImage; }
 
     if (empty($fields)) {

@@ -65,6 +65,26 @@ try {
         exit;
     }
 
+    /* ================= 🔄 STOCK RESTORATION LOGIC ================= */
+    // If order is Rejected/Cancelled, we must add the items back to stock.
+    if ($status === 'REJECTED' || $status === 'CANCELLED') {
+        // 1. Get items in this order
+        $itemsStmt = $pdo->prepare("SELECT name, menu_item_id, qty FROM order_items WHERE order_id = ?");
+        $itemsStmt->execute([$orderId]);
+        $orderItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 2. Restore stock
+        $restoreStmt = $pdo->prepare("UPDATE menu_items SET stock = stock + ? WHERE id = ?");
+        $availStmt = $pdo->prepare("UPDATE menu_items SET is_available = 1 WHERE id = ? AND stock > 0");
+
+        foreach ($orderItems as $item) {
+             $restoreStmt->execute([$item['qty'], $item['menu_item_id']]);
+             // If item was auto-disabled (stock=0), re-enable it
+             $availStmt->execute([$item['menu_item_id']]);
+        }
+    }
+    /* ============================================================== */
+
     // ✅ FIXED: Use correct column name 'delivery_partner_id'
     if ($status === 'REJECTED') {
         // For rejected orders

@@ -22,7 +22,16 @@ if (!$cart) {
     $cart_id = $cart['id'];
 }
 
-/* 2. Check if item already exists */
+/* 2. Check Stock & Add */
+$stockStmt = $pdo->prepare("SELECT stock, is_available FROM menu_items WHERE id = ?");
+$stockStmt->execute([$menu_item_id]);
+$menuItem = $stockStmt->fetch();
+
+if (!$menuItem || $menuItem['is_available'] == 0 || $menuItem['stock'] <= 0) {
+    echo json_encode(["success"=>false, "message"=>"Item out of stock!"]);
+    exit;
+}
+
 $stmt = $pdo->prepare(
     "SELECT id, quantity FROM cart_items WHERE cart_id=? AND menu_item_id=?"
 );
@@ -30,6 +39,10 @@ $stmt->execute([$cart_id, $menu_item_id]);
 $item = $stmt->fetch();
 
 if ($item) {
+    if ($item['quantity'] >= $menuItem['stock']) {
+        echo json_encode(["success"=>false, "message"=>"Maximum stock reached!"]);
+        exit;
+    }
     $pdo->prepare(
         "UPDATE cart_items SET quantity = quantity + 1 WHERE id=?"
     )->execute([$item['id']]);

@@ -30,6 +30,7 @@ SELECT
     m.description,
     m.price,
     m.category,
+    m.stock,
     m.image_url
 FROM menu_items m
 LEFT JOIN menu_filters f ON f.menu_item_id = m.id

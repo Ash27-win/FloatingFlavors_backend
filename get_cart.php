@@ -24,6 +24,8 @@ $stmt = $pdo->prepare("
         ci.menu_item_id,        
         m.name,
         m.image_url,
+        m.stock,
+        m.is_available,
         ci.quantity,
         ci.price,
         (ci.quantity * ci.price) AS subtotal

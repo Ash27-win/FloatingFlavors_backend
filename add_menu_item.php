@@ -33,6 +33,9 @@ $price = number_format((float)$price, 2, '.', '');
 // default stored relative path (empty if no upload)
 $relativePath = "";
 
+// stock (optional, default 50)
+$stock = isset($_POST['stock']) ? (int)$_POST['stock'] : 50;
+
 // handle file if provided under "image"
 if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
     $file = $_FILES['image'];
@@ -66,8 +69,8 @@ if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE)
 }
 
 try {
-    $stmt = $pdo->prepare("INSERT INTO menu_items (name, description, price, category, image_url, is_available) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$name, $description, $price, $category, $relativePath, $isAvailable]);
+    $stmt = $pdo->prepare("INSERT INTO menu_items (name, description, price, category, image_url, is_available, stock) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$name, $description, $price, $category, $relativePath, $isAvailable, $stock]);
 
     // return image_full for convenience
     $imageFull = $relativePath !== "" ? ($baseUrl . $relativePath) : "";

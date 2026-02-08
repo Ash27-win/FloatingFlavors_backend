@@ -13,7 +13,7 @@ $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 $baseUrl = rtrim($protocol . "://" . $host . $scriptDir, '/') . '/';
 
 try {
-    $stmt = $pdo->query("SELECT id, name, description, price, category, image_url, is_available, created_at FROM menu_items ORDER BY id DESC");
+    $stmt = $pdo->query("SELECT id, name, description, price, category, image_url, is_available, stock, created_at FROM menu_items ORDER BY id DESC");
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($items as &$item) {

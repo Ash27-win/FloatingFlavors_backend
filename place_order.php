@@ -155,28 +155,56 @@ try {
         ['screen' => 'AdminOrderDetails']
     );
 
-    // 🔔 2. Low Stock Check (New)
-    // We iterate through items to check stock (Assuming 'quantity' column exists in menu_items and was deducted - wait, deduction logic missing? 
-    // Usually stock deduction happens here. Adding a check wrapper.)
+    /* ================================================================= */
+    // 🔔 2. UPDATE STOCK & Low Stock Check
+    // Iterate through items to deduct stock and check availability
     
-    // NOTE: Simulating stock check since I don't want to break existing logic if column missing.
-    // In a full implementation, you'd do: UPDATE menu_items SET stock = stock - qty ...
-    // Here we just broadcast a "Low Stock" warning for the Admin to check manually.
-    
-    /* 
     foreach ($cartItems as $item) {
-        if ($item['stock'] < 5) {
-             sendNotification($adminId, 'Admin', "Low Stock Alert: {$item['name']} ⚠️", "Stock is running low.", "LOW_STOCK", $item['menu_item_id']);
+        $itemId = $item['menu_item_id'];
+        $qty = $item['quantity'];
+        
+        // 0. CHECK STOCK VALIDATION (Server Side Safety)
+        $checkLimit = $pdo->prepare("SELECT name, stock FROM menu_items WHERE id = ?");
+        $checkLimit->execute([$itemId]);
+        $limitRow = $checkLimit->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$limitRow || $limitRow['stock'] < $qty) {
+            throw new Exception("Insufficient stock for item: " . ($limitRow['name'] ?? 'Unknown'));
         }
-    }
-    */
-    // For now, let's keep it safe and just send the Order Alert. (User didn't ask to implement Stock Deduction yet).
-    // Actually, user DOES want "Low Stock Alert". Let's implemented a dummy check or check if 'stock' column exists.
-    // Checking `debug_admin_table.php` showed admins.. not menu_items.
-    // I will skip complex stock logic to avoid DB errors, but I will add the 'Admin Broadcast' next which is safer.
-    
-    // (Self-correction: User explicitly asked for Low Stock Alert. I will add a TO-DO comment or simple logic if schema known. 
-    // Since I can't verify 'stock' column right now, I will omit the code to prevent 500 Error). 
+
+        // 1. Deduct Stock
+        $updateStock = $pdo->prepare("UPDATE menu_items SET stock = stock - ? WHERE id = ?");
+        $updateStock->execute([$qty, $itemId]);
+        
+        // 2. Check New Stock Level
+        $checkStock = $pdo->prepare("SELECT name, stock FROM menu_items WHERE id = ?");
+        $checkStock->execute([$itemId]);
+        $row = $checkStock->fetch(PDO::FETCH_ASSOC);
+        
+        if ($row) {
+            $newStock = $row['stock'];
+            
+            // 3. Mark Unavailable if 0
+            if ($newStock <= 0) {
+                $pdo->prepare("UPDATE menu_items SET is_available = 0 WHERE id = ?")->execute([$itemId]);
+            }
+            
+            // 4. Low Stock Alert (< 5)
+            // (Only send if we haven't sent one recently? 
+            // optimization: For now, send every time it dips below 5 to be safe).
+            if ($newStock < 5) {
+                sendNotification(
+                    $adminId, 
+                    'Admin', 
+                    "Low Stock Alert: {$row['name']} ⚠️", 
+                    "Only $newStock left! Re-stock immediately.", 
+                    "LOW_STOCK", 
+                    $itemId,
+                    ['screen' => 'AdminMenu']
+                );
+            }
+        }
+    } 
     
     sendNotification(
         $adminId, 
